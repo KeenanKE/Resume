@@ -34,6 +34,7 @@ class ProjectsCarousel {
     this.currentIndex = 0;
     this.cardWidth = 350 + 24; // card width + gap
     this.visibleCards = this.getVisibleCards();
+    // Fix: Only allow scrolling if there are more cards than visible
     this.maxIndex = Math.max(0, this.cards.length - this.visibleCards);
     
     this.autoSlideInterval = null;
@@ -46,14 +47,20 @@ class ProjectsCarousel {
   
   getVisibleCards() {
     const containerWidth = this.track.parentElement.offsetWidth;
-    return Math.floor((containerWidth - 32) / this.cardWidth); // subtract padding
+    const calculatedVisible = Math.floor((containerWidth - 32) / this.cardWidth);
+    // Ensure we never show more cards than available
+    return Math.min(calculatedVisible, this.cards.length);
   }
   
   init() {
     if (!this.track || this.cards.length === 0) return;
     
     this.updateCarousel();
-    this.startAutoSlide();
+    
+    // Only start auto-slide if there are cards to scroll
+    if (this.maxIndex > 0) {
+      this.startAutoSlide();
+    }
     
     // Event listeners for navigation buttons
     this.prevBtn?.addEventListener('click', () => {
@@ -100,26 +107,47 @@ class ProjectsCarousel {
     const translateX = -this.currentIndex * this.cardWidth;
     this.track.style.transform = `translateX(${translateX}px)`;
     
-    // Update indicators
+    // Update indicators based on available slides
+    const totalSlides = Math.max(1, this.maxIndex + 1);
     this.indicators.forEach((indicator, index) => {
-      indicator.classList.toggle('active', index === this.currentIndex);
+      if (index < totalSlides) {
+        indicator.style.display = 'block';
+        indicator.classList.toggle('active', index === this.currentIndex);
+      } else {
+        indicator.style.display = 'none';
+      }
     });
     
     // Update navigation buttons
     if (this.prevBtn) {
       this.prevBtn.disabled = this.currentIndex === 0;
+      this.prevBtn.style.opacity = this.currentIndex === 0 ? '0.3' : '0.8';
     }
     
     if (this.nextBtn) {
       this.nextBtn.disabled = this.currentIndex >= this.maxIndex;
+      this.nextBtn.style.opacity = this.currentIndex >= this.maxIndex ? '0.3' : '0.8';
+    }
+    
+    // Hide navigation if no scrolling is needed
+    if (this.maxIndex === 0) {
+      if (this.prevBtn) this.prevBtn.style.display = 'none';
+      if (this.nextBtn) this.nextBtn.style.display = 'none';
+      document.querySelector('.carousel-indicators').style.display = 'none';
+    } else {
+      if (this.prevBtn) this.prevBtn.style.display = 'flex';
+      if (this.nextBtn) this.nextBtn.style.display = 'flex';
+      document.querySelector('.carousel-indicators').style.display = 'flex';
     }
   }
   
   nextSlide() {
+    // Only move if we haven't reached the maximum
     if (this.currentIndex < this.maxIndex) {
       this.currentIndex++;
-    } else {
-      this.currentIndex = 0; // Loop back to start
+    } else if (this.maxIndex > 0) {
+      // Loop back to start only if there are multiple positions
+      this.currentIndex = 0;
     }
     this.updateCarousel();
   }
@@ -127,19 +155,22 @@ class ProjectsCarousel {
   prevSlide() {
     if (this.currentIndex > 0) {
       this.currentIndex--;
-    } else {
-      this.currentIndex = this.maxIndex; // Loop to end
+    } else if (this.maxIndex > 0) {
+      // Loop to end only if there are multiple positions
+      this.currentIndex = this.maxIndex;
     }
     this.updateCarousel();
   }
   
   goToSlide(index) {
+    // Ensure the index is within valid bounds
     this.currentIndex = Math.min(Math.max(0, index), this.maxIndex);
     this.updateCarousel();
   }
   
   startAutoSlide() {
-    if (this.isAutoSliding && !this.isPaused && this.cards.length > this.visibleCards) {
+    // Only auto-slide if there are multiple positions and not paused
+    if (this.isAutoSliding && !this.isPaused && this.maxIndex > 0) {
       this.autoSlideInterval = setInterval(() => {
         this.nextSlide();
       }, this.autoSlideDelay);
@@ -191,9 +222,12 @@ class ProjectsCarousel {
       const currentX = e.touches[0].clientX;
       const diff = startX - currentX;
       
-      // Add some visual feedback during drag
+      // Add some visual feedback during drag (but prevent over-scrolling)
       if (Math.abs(diff) > 10) {
-        this.track.style.transform = `translateX(${-this.currentIndex * this.cardWidth - diff * 0.3}px)`;
+        const maxTranslate = -this.maxIndex * this.cardWidth;
+        const currentTranslate = -this.currentIndex * this.cardWidth - diff * 0.3;
+        const clampedTranslate = Math.max(maxTranslate, Math.min(0, currentTranslate));
+        this.track.style.transform = `translateX(${clampedTranslate}px)`;
       }
     }, { passive: true });
     
@@ -210,9 +244,9 @@ class ProjectsCarousel {
       
       // Determine if it's a swipe (minimum distance and velocity)
       if (Math.abs(diff) > 50 || velocity > 0.5) {
-        if (diff > 0) {
+        if (diff > 0 && this.currentIndex < this.maxIndex) {
           this.nextSlide();
-        } else {
+        } else if (diff < 0 && this.currentIndex > 0) {
           this.prevSlide();
         }
       }
@@ -238,6 +272,7 @@ class ProjectsCarousel {
   
   updateVisibleCards() {
     this.cards = document.querySelectorAll('.project-card[style*="block"], .project-card:not([style*="none"])');
+    this.visibleCards = this.getVisibleCards();
     this.maxIndex = Math.max(0, this.cards.length - this.visibleCards);
   }
 }
