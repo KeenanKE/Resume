@@ -17,9 +17,32 @@ const observer = new IntersectionObserver((entries) => {
 function toggleMobileNav() {
   const navMenu = document.getElementById('nav-menu');
   const navToggle = document.getElementById('nav-toggle');
+  const body = document.body;
   
-  navMenu.classList.toggle('active');
-  navToggle.classList.toggle('active');
+  if (navMenu && navToggle) {
+    navMenu.classList.toggle('active');
+    navToggle.classList.toggle('active');
+    
+    // Prevent body scroll when menu is open
+    if (navMenu.classList.contains('active')) {
+      body.style.overflow = 'hidden';
+    } else {
+      body.style.overflow = '';
+    }
+  }
+}
+
+// Close mobile menu when clicking on nav links
+function closeMobileNav() {
+  const navMenu = document.getElementById('nav-menu');
+  const navToggle = document.getElementById('nav-toggle');
+  const body = document.body;
+  
+  if (navMenu && navToggle) {
+    navMenu.classList.remove('active');
+    navToggle.classList.remove('active');
+    body.style.overflow = '';
+  }
 }
 
 // Projects Carousel functionality
@@ -358,7 +381,35 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   // Mobile navigation toggle
-  document.getElementById('nav-toggle')?.addEventListener('click', toggleMobileNav);
+  const navToggle = document.getElementById('nav-toggle');
+  if (navToggle) {
+    navToggle.addEventListener('click', toggleMobileNav);
+  }
+  
+  // Close mobile menu when clicking on nav links
+  const navLinks = document.querySelectorAll('.nav-link');
+  navLinks.forEach(link => {
+    link.addEventListener('click', closeMobileNav);
+  });
+  
+  // Close mobile menu when clicking outside
+  document.addEventListener('click', (e) => {
+    const navMenu = document.getElementById('nav-menu');
+    const navToggle = document.getElementById('nav-toggle');
+    const navbar = document.querySelector('.navbar');
+    
+    if (navMenu && navMenu.classList.contains('active') && 
+        !navbar.contains(e.target)) {
+      closeMobileNav();
+    }
+  });
+  
+  // Close mobile menu on window resize if screen becomes larger
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) {
+      closeMobileNav();
+    }
+  });
   
   // Contact form handling
   const contactForm = document.getElementById('contact-form');
