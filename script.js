@@ -459,16 +459,35 @@ function handleContactForm(e) {
   
   // Get form data
   const formData = new FormData(e.target);
-  const data = Object.fromEntries(formData);
+  const templateParams = {
+    from_name: formData.get('name'),
+    from_email: formData.get('email'),
+    subject: formData.get('subject'),
+    message: formData.get('message'),
+    to_email: 'keenanwekesa@gmail.com'
+  };
   
-  // Here you would typically send the data to your server
-  console.log('Contact form submitted:', data);
+  // Show loading state
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const originalText = submitBtn.innerHTML;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+  submitBtn.disabled = true;
   
-  // Show success message (you can customize this)
-  alert('Thank you for your message! I will get back to you soon.');
-  
-  // Reset form
-  e.target.reset();
+  // Send email using EmailJS
+  emailjs.send('service_it4j2a3', 'template_gn1e3jo', templateParams)
+    .then(function(response) {
+      console.log('SUCCESS!', response.status, response.text);
+      alert('Thank you for your message! I will get back to you soon.');
+      e.target.reset();
+    }, function(error) {
+      console.log('FAILED...', error);
+      alert('Sorry, there was an error sending your message. Please try again or contact me directly.');
+    })
+    .finally(function() {
+      // Restore button state
+      submitBtn.innerHTML = originalText;
+      submitBtn.disabled = false;
+    });
 }
 
 // Three.js animation for hero section
